@@ -3,7 +3,6 @@ import cv2
 import keyboard as keyboard
 import pyautogui
 import autopy
-
 import mediapipe as mp
 
 indexOpen=0
@@ -11,7 +10,7 @@ indexClose=0
 mp_drawing = mp.solutions.drawing_utils
 mp_hands = mp.solutions.hands
 wScr, hScr = autopy.screen.size()
-def getRightOrLeft(results,img, hands):
+def getRightOrLeft(results,img, hands): #распознование нужной руки
     lmListRight = []
     bboxRight = []
     lmListLeft = []
@@ -27,7 +26,7 @@ def getRightOrLeft(results,img, hands):
 
     return lmListLeft, bboxLeft, lmListRight, bboxRight
 
-def findPosition(img, results, handNo=0):
+def findPosition(img, results, handNo=0): #нахождение точек пальцев в простарнстве
     xList = []
     yList = []
     bbox = []
@@ -59,7 +58,7 @@ def thumbPosition(p1, p2,p3, p4,p5,p6, p7,p8,p9,p10,p11, img, lmList):
     x11, y11 = lmList[p11][1], lmList[p11][2]
     return x1, y1,  x2, y2,x3, y3,x4, y4,x5, y5,x6, y6,x7, y7, x8, y8,x9, y9,x10, y10,x11, y11
 
-def findDistance(finger1, finger2, img, lmList):
+def findDistance(finger1, finger2, img, lmList): #нахождение расстояния между точками пальцев
     x1, y1 = lmList[finger1][1], lmList[finger1][2]
     x2, y2 = lmList[finger2][1], lmList[finger2][2]
     cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
@@ -68,7 +67,7 @@ def findDistance(finger1, finger2, img, lmList):
     return length, img, [x1, y1, x2, y2, cx, cy]
 
 
-def fingersUp(lmList):
+def fingersUp(lmList): #поднят ли палец. НЕ работает для большого пальца
     fingers = []
     tipIds = [4, 8, 12, 16, 20]
     if lmList[tipIds[0]][1] < lmList[tipIds[0] - 1][1]:
@@ -82,7 +81,7 @@ def fingersUp(lmList):
             fingers.append(0)
     return fingers
 
-def draw(img, results):
+def draw(img, results): #отобразить схему руки
     if results.multi_hand_landmarks:
         for num, hand in enumerate(results.multi_hand_landmarks):
             mp_drawing.draw_landmarks(img, hand, mp_hands.HAND_CONNECTIONS,
@@ -112,7 +111,7 @@ def mouseContrl(indCam, mainHand):
     global indHome
     global indEsc
     with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.5) as hands:
-        indexClose=indexClose
+        indexClose=indexClose #отсчитывает задержку перед командой закрытия распознования
         indexClick=indexClick
         indexRightClick=indexRightClick
         cap = cv2.VideoCapture(indCam)
@@ -132,12 +131,13 @@ def mouseContrl(indCam, mainHand):
                         tx1, ty1, tx2, ty2, px1, py1, px2, py2, ix1, iy1, ix2, iy2, mx1, my1, mx2, my2, rx1, ry1, rx2, ry2, hx, hy = thumbPosition(
                             2, 4, 17, 20, 6, 8, 10, 12, 14, 16, 0, img, lmListLeft)
                         x1, y1 = lmListLeft[8][1:]
+                        #движение мышью
                         fingers = fingersUp(lmListLeft)
                         if fingers[1] == 1 and fingers[2] == 0:
                             realX = (x1 / (wCam-wCam/5)) * wScr
                             realY = (y1 / (hCam-hCam/3)) * hScr
                             pyautogui.moveTo(realX, realY)
-
+                        #для щелчка левой кнопкой мышью
                         if fingers[1] == 1 and fingers[2] == 1 and fingers[3] == 0 and fingers[4] == 0:
 
                             length, img, lineInfo = findDistance(8, 12, img, lmListLeft)
@@ -152,6 +152,7 @@ def mouseContrl(indCam, mainHand):
                                 indexClick=0
 
                         print(fingers)
+                        #для щелчка правой кнопкой мыши
                         if fingers[4] == 1 and fingers[1] == 1 and fingers[2] ==0 and fingers[3] == 0:
                             indexRightClick+=1
                             if indexRightClick==3:
@@ -161,6 +162,7 @@ def mouseContrl(indCam, mainHand):
                         else:
                             indexRightClick=0
 
+                        #ЗАКРЫТИЕ ОБРАБОТКИ
                         if fingers[1] == 1 and fingers[2] == 1 and fingers[3] == 1 and fingers[4] == 1:
                             indexClose += 1
                             print(indexClose)
@@ -168,15 +170,16 @@ def mouseContrl(indCam, mainHand):
                                 break
                         else:
                             indexClose=0
-
+                        #команда страница вниз
                         if fingers[3] == 1 and fingers[1] == 1 and fingers[2] == 1 and fingers[4] != 1:
                             indDown+=1
-                            print('{}, indUp', indDown)
+                            print('{}, indDown', indDown)
                             if indDown==3:
                                 keyboard.send("page down")
                                 indDown=0
                         else:
                             indDown=0
+                            #команда страница вверх
                         if fingers[4] == 1 and fingers[1] == 1 and fingers[2] == 1 and fingers[3] != 1:
                             indUp+=1
                             print('{}, indUp', indUp)
@@ -185,6 +188,7 @@ def mouseContrl(indCam, mainHand):
                                 indUp=0
                         else:
                             indUp=0
+                        #команда "домой"
                         if tx1<tx2 and fingers[4] != 1 and fingers[1] != 1 and fingers[2] != 1 and fingers[3] != 1 and hx<tx1:
                             indHome+=1
                             print('{}, indHome', indHome)
@@ -193,6 +197,7 @@ def mouseContrl(indCam, mainHand):
                                 indHome=0
                         else:
                             indHome=0
+                        #команда "в конец"
                         if  tx1>tx2 and fingers[4] != 1 and fingers[1] != 1 and fingers[2] != 1 and fingers[3] != 1:
                             indEnd+=1
                             print('{}, indEnd', indEnd)
